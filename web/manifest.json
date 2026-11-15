@@ -1,11 +1,11 @@
 {
-    "name": "i_shall_be_released",
-    "short_name": "i_shall_be_released",
+    "name": "I Shall Be Released",
+    "short_name": "ISBR",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#131919",
+    "theme_color": "#5B4FC4",
+    "description": "Orçamento mensal e investimentos em um só lugar.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

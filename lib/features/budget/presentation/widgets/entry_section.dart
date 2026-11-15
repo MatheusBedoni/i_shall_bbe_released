@@ -77,7 +77,11 @@ class EntrySection extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: env.usedFraction.clamp(0, 1).toDouble(),
                   minHeight: 6,
-                  color: env.isOverBudget ? scheme.error : scheme.primary,
+                  color: env.isOverBudget
+                      ? scheme.error
+                      : type == EntryType.investment
+                          ? scheme.secondary
+                          : scheme.primary,
                 ),
               ),
               const SizedBox(height: 4),

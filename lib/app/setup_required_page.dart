@@ -23,7 +23,9 @@ class SetupRequiredApp extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.settings_suggest_outlined, size: 64),
+                  ClipOval(
+                    child: Image.asset('asset/icon.png', width: 96, height: 96),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Firebase não configurado',

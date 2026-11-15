@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "182903513862",
+    "project_id": "ishallbereleased-70404",
+    "storage_bucket": "ishallbereleased-70404.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182903513862:android:61af538684f01ab069f487",
+        "android_client_info": {
+          "package_name": "com.example.i_shall_be_released"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATZBVHMrHgY67E1V4LGORYk-ckMtwpx4g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

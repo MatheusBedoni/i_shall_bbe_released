@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/money.dart';
 import '../../../../core/utils/percent.dart';
 import '../../domain/entities/allocation_rule.dart';
@@ -19,7 +20,7 @@ class SummaryCards extends StatelessWidget {
         title: 'Ganho Mensal',
         value: summary.income,
         note: 'Total de ganhos lançados',
-        color: scheme.primary,
+        color: scheme.income,
       ),
       _CardData(
         title: 'Orçamento Despesas Fixas',
@@ -30,6 +31,7 @@ class SummaryCards extends StatelessWidget {
         title: 'Orçamento Investimentos',
         value: summary.investments.budget,
         note: '${Percent.format(rule.investmentPct, decimals: 0)} do ganho',
+        color: scheme.investment,
       ),
       _CardData(
         title: 'Orçamento Despesas Recorrentes',
@@ -40,7 +42,7 @@ class SummaryCards extends StatelessWidget {
         title: 'Saldo Final',
         value: summary.finalBalance,
         note: 'Ganho menos tudo que foi lançado',
-        color: summary.finalBalance < 0 ? scheme.error : scheme.tertiary,
+        color: summary.finalBalance < 0 ? scheme.loss : scheme.gain,
       ),
       _CardData(
         title: 'Gasto diário permitido',
