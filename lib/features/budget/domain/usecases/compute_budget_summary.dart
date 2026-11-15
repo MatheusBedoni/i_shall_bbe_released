@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../../../core/usecase/usecase.dart';
 import '../../../../core/utils/result.dart';
 import '../entities/allocation_rule.dart';
@@ -20,8 +22,17 @@ final class ComputeBudgetSummaryParams {
   final DateTime now;
 }
 
-/// Regra de negócio central do orçamento: a partir dos lançamentos e da regra
-/// de alocação, calcula envelopes, saldo e gasto diário permitido.
+/// Regra de negócio central do orçamento (cascata dinâmica):
+///
+/// ```
+/// fixasOrc        = ganho × fixedPct
+/// apósFixas       = ganho − fixasGastas
+/// investOrc       = apósFixas × investmentPct
+/// recorrentesOrc  = apósFixas − investimentosFeitos
+/// ```
+///
+/// O que não for gasto em fixas ou investimentos sobra, automaticamente,
+/// para as despesas recorrentes.
 final class ComputeBudgetSummary
     implements SyncUseCase<BudgetSummary, ComputeBudgetSummaryParams> {
   const ComputeBudgetSummary();
@@ -35,8 +46,13 @@ final class ComputeBudgetSummary
         .where((e) => e.type == type)
         .fold(0.0, (sum, e) => sum + e.amount);
 
-    final income = total(EntryType.income);
     final rule = params.rule;
+    final income = total(EntryType.income);
+    final fixedSpent = total(EntryType.fixedExpense);
+    final investmentSpent = total(EntryType.investment);
+    final recurringSpent = total(EntryType.recurringExpense);
+
+    final afterFixed = math.max(0.0, income - fixedSpent);
 
     return Success(
       BudgetSummary(
@@ -44,17 +60,17 @@ final class ComputeBudgetSummary
         fixedExpenses: EnvelopeSummary(
           type: EntryType.fixedExpense,
           budget: income * rule.fixedExpensePct,
-          spent: total(EntryType.fixedExpense),
+          spent: fixedSpent,
         ),
         investments: EnvelopeSummary(
           type: EntryType.investment,
-          budget: income * rule.investmentPct,
-          spent: total(EntryType.investment),
+          budget: afterFixed * rule.investmentPct,
+          spent: investmentSpent,
         ),
         recurringExpenses: EnvelopeSummary(
           type: EntryType.recurringExpense,
-          budget: income * rule.recurringExpensePct,
-          spent: total(EntryType.recurringExpense),
+          budget: math.max(0.0, afterFixed - investmentSpent),
+          spent: recurringSpent,
         ),
         daysRemaining: params.period.daysRemaining(params.now),
       ),

@@ -30,13 +30,13 @@ class SummaryCards extends StatelessWidget {
       _CardData(
         title: 'Orçamento Investimentos',
         value: summary.investments.budget,
-        note: '${Percent.format(rule.investmentPct, decimals: 0)} do ganho',
+        note: '${Percent.format(rule.investmentPct, decimals: 0)} do que sobra após fixas',
         color: scheme.investment,
       ),
       _CardData(
         title: 'Orçamento Despesas Recorrentes',
         value: summary.recurringExpenses.budget,
-        note: 'Restante após fixas e investimentos',
+        note: 'Sobra após fixas e investimentos realizados',
       ),
       _CardData(
         title: 'Saldo Final',

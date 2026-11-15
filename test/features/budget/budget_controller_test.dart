@@ -131,6 +131,9 @@ void main() {
     expect(c.entriesOf(EntryType.income), hasLength(1));
     expect(c.summary?.income, 5000);
     expect(c.summary?.fixedExpenses.budget, closeTo(1650, 1e-9));
+    // Nada gasto em fixas ainda → investimentos sobre o ganho inteiro.
+    expect(c.summary?.investments.budget, closeTo(1650, 1e-9));
+    expect(c.summary?.recurringExpenses.budget, closeTo(5000, 1e-9));
   });
 
   test('validação impede valor zero e expõe erro', () async {
@@ -184,13 +187,14 @@ void main() {
     expect(ok, isTrue);
     expect(c.rule.fixedExpensePct, 0.5);
     expect(c.summary?.fixedExpenses.budget, 500);
-    expect(c.summary?.recurringExpenses.budget, closeTo(400, 1e-9));
+    expect(c.summary?.investments.budget, closeTo(100, 1e-9));
+    expect(c.summary?.recurringExpenses.budget, closeTo(1000, 1e-9));
   });
 
   test('regra inválida é rejeitada', () async {
     await _flush();
     final ok = await c.saveRule(
-      const AllocationRule(fixedExpensePct: 0.8, investmentPct: 0.5),
+      const AllocationRule(fixedExpensePct: 1.5, investmentPct: 0.5),
     );
     expect(ok, isFalse);
     expect(c.error, contains('100%'));

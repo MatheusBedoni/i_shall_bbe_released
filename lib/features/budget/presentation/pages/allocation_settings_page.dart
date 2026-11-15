@@ -44,27 +44,39 @@ class _AllocationSettingsPageState extends State<AllocationSettingsPage> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            'Defina quanto do seu ganho mensal vai para cada envelope. '
-            'O que sobrar é o orçamento de despesas recorrentes.',
+            'A distribuição é em cascata e se ajusta todo mês ao que foi '
+            'realmente gasto: o que não for usado em despesas fixas ou '
+            'investimentos sobra para as despesas recorrentes.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
           _PercentSlider(
             label: 'Despesas fixas',
+            hint: 'do ganho mensal',
             value: _fixed,
             onChanged: (v) => setState(() => _fixed = v),
           ),
           _PercentSlider(
             label: 'Investimentos',
+            hint: 'do que sobrar após as despesas fixas',
             value: _investment,
             onChanged: (v) => setState(() => _investment = v),
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Despesas recorrentes (restante)'),
-            trailing: Text(
-              Percent.format(_rule.recurringExpensePct, decimals: 0),
-              style: theme.textTheme.titleMedium,
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Se tudo for gasto exatamente no orçamento:',
+                      style: theme.textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  _NominalRow('Despesas fixas', _fixed),
+                  _NominalRow('Investimentos', _rule.nominalInvestmentPct),
+                  _NominalRow('Despesas recorrentes', _rule.nominalRecurringPct),
+                ],
+              ),
             ),
           ),
           if (error != null) ...[
@@ -95,25 +107,56 @@ class _AllocationSettingsPageState extends State<AllocationSettingsPage> {
   }
 }
 
+class _NominalRow extends StatelessWidget {
+  const _NominalRow(this.label, this.value);
+  final String label;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(Percent.format(value, decimals: 0)),
+        ],
+      ),
+    );
+  }
+}
+
 class _PercentSlider extends StatelessWidget {
   const _PercentSlider({
     required this.label,
+    required this.hint,
     required this.value,
     required this.onChanged,
   });
   final String label;
+  final String hint;
   final double value;
   final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Expanded(child: Text(label)),
-            Text(Percent.format(value, decimals: 0)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label),
+                  Text(hint, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+            Text(Percent.format(value, decimals: 0),
+                style: theme.textTheme.titleMedium),
           ],
         ),
         Slider(

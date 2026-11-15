@@ -88,10 +88,11 @@ users/{uid}/goals/{id}                 (próxima iteração)
 
 ## Regras de negócio principais
 
-- **Orçamento em envelopes**: despesas fixas e investimentos recebem um percentual do ganho
-  mensal (padrão 33% / 33%, configurável); o restante é o envelope de despesas recorrentes.
-  Saldo final = ganho − tudo que foi lançado. Gasto diário = restante de recorrentes ÷ dias
-  restantes no mês.
+- **Orçamento em cascata dinâmica** (como no protótipo): fixas = ganho × 33%;
+  investimentos = (ganho − fixas *gastas*) × 33%; recorrentes = ganho − fixas gastas −
+  investimentos realizados. Percentuais configuráveis. O que não for usado em fixas ou
+  investimentos sobra automaticamente para recorrentes. Saldo final = ganho − tudo que foi
+  lançado. Gasto diário = restante de recorrentes ÷ dias restantes no mês.
 - **Posições da carteira**: preço médio ponderado incluindo taxas; vendas mantêm o preço médio
   e realizam lucro/prejuízo; proventos somam ao retorno total; ativos sem cotação valem o custo.
 - **Projeção de metas**: juros compostos com aportes mensais, meses até a meta, valor
