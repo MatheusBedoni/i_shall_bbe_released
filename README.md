@@ -1,71 +1,32 @@
-# i_shall_be_released
+# I Shall Be Released
 
-Aplicação Flutter organizada em **Clean Architecture**, com separação por feature.
+App público de finanças pessoais em Flutter: **orçamento mensal** (evolução do
+[protótipo Plano de Contas](https://planodecontas-matheusbedoni.vercel.app/)) com foco em
+**investimentos** (carteira, cotações, proventos, metas e projeções).
 
-## Estrutura
+Backend: **Firebase** (Authentication + Cloud Firestore). Arquitetura: **Clean Architecture**
+por feature.
 
-```
-lib/
-├── main.dart                    # Ponto de entrada: só chama runApp(App())
-├── app/                         # Composição da aplicação
-│   ├── app.dart                 # MaterialApp (tema, rotas)
-│   ├── di/injection_container.dart   # Composition root (injeção de dependências)
-│   └── router/                  # Nomes de rota e onGenerateRoute
-├── core/                        # Código compartilhado entre features
-│   ├── error/                   # Failure (domínio) e Exception (data)
-│   ├── usecase/                 # Contrato UseCase<T, Params> e NoParams
-│   ├── utils/result.dart        # Result<T> = Success | Error (sem pacotes externos)
-│   └── theme/                   # Tema global
-└── features/
-    └── home/                    # Uma pasta por feature
-        ├── domain/              # Regras de negócio (Dart puro, sem Flutter)
-        │   ├── entities/
-        │   ├── repositories/    # Interfaces (contratos)
-        │   └── usecases/
-        ├── data/                # Implementação de acesso a dados
-        │   ├── datasources/     # Remoto / local; lançam Exceptions
-        │   ├── models/          # DTOs com fromJson/toJson e toEntity()
-        │   └── repositories/    # Implementam os contratos; convertem Exception -> Failure
-        └── presentation/        # UI e gerenciamento de estado
-            ├── controllers/     # ChangeNotifier + estado selado
-            ├── pages/
-            └── widgets/
+## Configuração do Firebase (obrigatória para rodar)
 
-test/                            # Espelha a estrutura de lib/
-```
+1. Crie um projeto em <https://console.firebase.google.com>.
+2. Ative **Authentication → E-mail/senha** e crie um banco **Cloud Firestore**.
+3. Na raiz do projeto:
 
-## Regra de dependência
+   ```bash
+   dart pub global activate flutterfire_cli
+   flutterfire configure
+   ```
 
-As dependências apontam sempre **para dentro**:
+   Isso substitui o placeholder `lib/firebase_options.dart` e registra os apps Android/iOS/Web.
+4. Publique as regras de segurança (ou cole o conteúdo de `firestore.rules` no console):
 
-```
-presentation ──► domain ◄── data
-       │                      │
-       └───────► core ◄───────┘
-```
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
 
-- `domain` não importa nada de `data`, `presentation` ou Flutter.
-- `data` depende de `domain` (implementa seus contratos) e de `core`.
-- `presentation` depende apenas de `domain` (use cases) e de `core`.
-- `app/di` é o único lugar que conhece implementações concretas.
-
-## Fluxo de uma chamada
-
-1. `HomePage` chama `HomeController.loadGreeting()`.
-2. O controller executa o use case `GetGreeting`.
-3. O use case chama `HomeRepository.getGreeting()` (interface).
-4. `HomeRepositoryImpl` chama o `HomeRemoteDataSource`, que devolve um `GreetingModel` ou lança `ServerException`.
-5. O repositório converte o model em `Greeting` (entidade) e a exceção em `ServerFailure`, devolvendo `Result<Greeting>`.
-6. O controller mapeia o `Result` para um `HomeState` e a UI reage.
-
-## Como adicionar uma feature
-
-1. Crie `lib/features/<nome>/{domain,data,presentation}`.
-2. Comece pelo `domain`: entidade, interface do repositório e use cases.
-3. Implemente `data`: model, datasource e `RepositoryImpl`.
-4. Crie o controller e as páginas em `presentation`.
-5. Registre as dependências em `app/di/injection_container.dart` e a rota em `app/router/`.
-6. Espelhe a estrutura em `test/` e escreva testes com fakes das interfaces.
+Enquanto o Firebase não estiver configurado, o app abre uma tela explicando o passo a passo
+em vez de quebrar.
 
 ## Comandos
 
@@ -76,8 +37,76 @@ flutter test
 flutter run
 ```
 
-## Evoluções sugeridas
+## Estrutura
 
-- Trocar o `InjectionContainer` manual por `get_it` ou `riverpod`.
-- Trocar `ChangeNotifier` por `flutter_bloc` se o estado crescer.
-- Substituir o `HomeRemoteDataSourceImpl` de exemplo por chamadas HTTP (`dio`/`http`).
+```
+lib/
+├── main.dart                      # Inicializa Firebase e sobe o App
+├── firebase_options.dart          # Gerado pelo flutterfire configure
+├── app/
+│   ├── app.dart                   # MaterialApp + AuthGate + shell com abas
+│   ├── di/injection_container.dart# Composition root (DI manual)
+│   └── setup_required_page.dart   # Tela exibida sem Firebase configurado
+├── core/                          # Compartilhado entre features
+│   ├── error/                     # Failure (domínio) e Exception (data)
+│   ├── usecase/                   # UseCase<T, Params>, SyncUseCase, NoParams
+│   ├── utils/                     # Result<T>, Money, Percent
+│   └── theme/
+└── features/
+    ├── auth/                      # Login/cadastro por e-mail (Firebase Auth)
+    ├── budget/                    # Orçamento mensal (Firestore em tempo real)
+    ├── portfolio/                 # Carteira de investimentos (domínio pronto)
+    ├── goals/                     # Metas e projeções (domínio pronto)
+    └── shell/                     # Navegação inferior, conta, placeholders
+```
+
+Cada feature segue `domain/` (entidades, contratos, use cases), `data/` (models,
+datasources, repositórios) e `presentation/` (controllers, pages, widgets). `test/`
+espelha `lib/` e usa fakes dos contratos, nunca o Firebase real.
+
+## Regra de dependência
+
+```
+presentation ──► domain ◄── data
+       │                      │
+       └───────► core ◄───────┘
+```
+
+`domain` não conhece Flutter nem Firebase. `data` implementa os contratos do domínio e
+traduz exceções em `Failure`s. `app/di` é o único lugar que instancia implementações.
+
+## Modelo de dados (Firestore)
+
+```
+users/{uid}/settings/allocation_rule   { fixedExpensePct, investmentPct }
+users/{uid}/budget_entries/{id}        { period: "2025-12", type, description, amount, createdAt }
+users/{uid}/assets/{id}                (próxima iteração)
+users/{uid}/transactions/{id}          (próxima iteração)
+users/{uid}/dividends/{id}             (próxima iteração)
+users/{uid}/goals/{id}                 (próxima iteração)
+```
+
+## Regras de negócio principais
+
+- **Orçamento em envelopes**: despesas fixas e investimentos recebem um percentual do ganho
+  mensal (padrão 33% / 33%, configurável); o restante é o envelope de despesas recorrentes.
+  Saldo final = ganho − tudo que foi lançado. Gasto diário = restante de recorrentes ÷ dias
+  restantes no mês.
+- **Posições da carteira**: preço médio ponderado incluindo taxas; vendas mantêm o preço médio
+  e realizam lucro/prejuízo; proventos somam ao retorno total; ativos sem cotação valem o custo.
+- **Projeção de metas**: juros compostos com aportes mensais, meses até a meta, valor
+  projetado no prazo e aporte necessário para cumprir o prazo.
+
+## Roadmap
+
+- [x] Esqueleto Clean Architecture
+- [x] Auth por e-mail/senha + recuperação de senha
+- [x] Orçamento mensal completo (lançamentos, envelopes, copiar mês anterior, regra configurável)
+- [x] Domínio de carteira (ativos, transações, proventos, posições) com testes
+- [x] Domínio de metas (projeção com juros compostos) com testes
+- [ ] Carteira: Firestore + telas (ativos, aportes, posição consolidada, alocação por classe)
+- [ ] Cotações em tempo real via brapi.dev
+- [ ] Proventos: lançamento e rendimento mensal
+- [ ] Metas: Firestore + telas + gráfico de projeção
+- [ ] Login com Google
+- [ ] Gráficos de evolução (patrimônio, gastos por categoria)

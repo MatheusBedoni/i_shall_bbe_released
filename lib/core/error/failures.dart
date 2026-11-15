@@ -9,6 +9,16 @@ sealed class Failure {
   final String message;
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other.runtimeType == runtimeType &&
+          other is Failure &&
+          other.message == message;
+
+  @override
+  int get hashCode => Object.hash(runtimeType, message);
+
+  @override
   String toString() => '$runtimeType($message)';
 }
 
@@ -20,6 +30,16 @@ final class ServerFailure extends Failure {
 /// Erro vindo do armazenamento local (cache, preferências, etc.).
 final class CacheFailure extends Failure {
   const CacheFailure([super.message = 'Erro ao acessar os dados locais.']);
+}
+
+/// Erro de autenticação (credenciais inválidas, usuário não logado, etc.).
+final class AuthFailure extends Failure {
+  const AuthFailure([super.message = 'Falha na autenticação.']);
+}
+
+/// Sem conexão com a internet.
+final class NetworkFailure extends Failure {
+  const NetworkFailure([super.message = 'Sem conexão com a internet.']);
 }
 
 /// Erro de validação de regra de negócio.

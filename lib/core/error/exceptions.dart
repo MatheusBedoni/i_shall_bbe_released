@@ -1,6 +1,6 @@
 /// Exceções lançadas pela camada **data** (datasources).
 ///
-/// Os repositórios capturam estas exceções e as convertem em [Failure]s,
+/// Os repositórios capturam estas exceções e as convertem em `Failure`s,
 /// de modo que o domínio nunca precise lidar com `try/catch`.
 class ServerException implements Exception {
   const ServerException([this.message = 'Server error']);
@@ -16,4 +16,20 @@ class CacheException implements Exception {
 
   @override
   String toString() => 'CacheException: $message';
+}
+
+class AuthException implements Exception {
+  const AuthException([this.message = 'Auth error']);
+  final String message;
+
+  @override
+  String toString() => 'AuthException: $message';
+}
+
+class NetworkException implements Exception {
+  const NetworkException([this.message = 'Network error']);
+  final String message;
+
+  @override
+  String toString() => 'NetworkException: $message';
 }
