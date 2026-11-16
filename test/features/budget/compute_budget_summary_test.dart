@@ -20,13 +20,42 @@ void main() {
   const useCase = ComputeBudgetSummary();
   final now = DateTime(2025, 12, 12); // 20 dias restantes
 
-  BudgetSummaryResult compute(List<BudgetEntry> entries, {AllocationRule? rule, DateTime? at}) =>
+  BudgetSummaryResult compute(
+    List<BudgetEntry> entries, {
+    AllocationRule? rule,
+    DateTime? at,
+    double linked = 0,
+  }) =>
       BudgetSummaryResult(useCase(ComputeBudgetSummaryParams(
         period: period,
         entries: entries,
         rule: rule ?? AllocationRule.defaultRule,
         now: at ?? now,
+        linkedInvestments: linked,
       )));
+
+  test('aportes da carteira somam ao envelope de investimentos', () {
+    final s = compute(
+      [
+        _entry(EntryType.income, 10000),
+        _entry(EntryType.fixedExpense, 3300),
+        _entry(EntryType.investment, 1000),
+      ],
+      linked: 1500,
+    ).value;
+
+    expect(s.investments.spent, closeTo(2500, 1e-9));
+    expect(s.investments.budget, closeTo(2211, 1e-9));
+    expect(s.investments.isOverBudget, isTrue);
+    // recorrentes = 6700 − 2500
+    expect(s.recurringExpenses.budget, closeTo(4200, 1e-9));
+    expect(s.finalBalance, closeTo(4200, 1e-9));
+  });
+
+  test('aportes negativos são ignorados', () {
+    final s = compute([_entry(EntryType.income, 100)], linked: -50).value;
+    expect(s.investments.spent, 0);
+  });
 
   test('cascata com a regra padrão: fixas 33% do ganho, invest. 33% do que sobra', () {
     final s = compute([

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../portfolio/domain/entities/contribution.dart';
+import '../../../portfolio/domain/usecases/portfolio_usecases.dart';
 import '../../domain/entities/allocation_rule.dart';
 import '../../domain/entities/budget_entry.dart';
 import '../../domain/entities/budget_period.dart';
@@ -10,10 +12,15 @@ import '../../domain/entities/entry_type.dart';
 import '../../domain/usecases/budget_usecases.dart';
 
 /// Estado da tela de orçamento mensal.
+///
+/// Além dos lançamentos do mês, observa os **aportes da carteira**
+/// ([WatchContributions]) e soma os que caem no período ao envelope de
+/// investimentos. As mutações de aportes ficam no `PortfolioController`.
 final class BudgetController extends ChangeNotifier {
   BudgetController({
     required this.watchEntries,
     required this.watchAllocationRule,
+    required this.watchContributions,
     required this.addEntry,
     required this.updateEntry,
     required this.deleteEntry,
@@ -27,6 +34,7 @@ final class BudgetController extends ChangeNotifier {
 
   final WatchEntries watchEntries;
   final WatchAllocationRule watchAllocationRule;
+  final WatchContributions watchContributions;
   final AddEntry addEntry;
   final UpdateEntry updateEntry;
   final DeleteEntry deleteEntry;
@@ -38,6 +46,7 @@ final class BudgetController extends ChangeNotifier {
 
   BudgetPeriod _period;
   List<BudgetEntry> _entries = const [];
+  List<Contribution> _allContributions = const [];
   AllocationRule _rule = AllocationRule.defaultRule;
   BudgetSummary? _summary;
   bool _loadingEntries = true;
@@ -46,6 +55,7 @@ final class BudgetController extends ChangeNotifier {
 
   StreamSubscription<Object>? _entriesSub;
   StreamSubscription<Object>? _ruleSub;
+  StreamSubscription<Object>? _contributionsSub;
 
   BudgetPeriod get period => _period;
   List<BudgetEntry> get entries => _entries;
@@ -53,6 +63,13 @@ final class BudgetController extends ChangeNotifier {
   BudgetSummary? get summary => _summary;
   bool get loading => _loadingEntries;
   String? get error => _error;
+
+  /// Aportes da carteira feitos dentro do período selecionado.
+  List<Contribution> get contributions =>
+      _allContributions.where((c) => _period.contains(c.date)).toList();
+
+  double get linkedInvestments =>
+      contributions.fold(0.0, (s, c) => s + c.amount);
 
   /// Mensagem transitória (ex.: "12 lançamentos copiados"). Zerada após leitura.
   String? consumeMessage() {
@@ -71,6 +88,12 @@ final class BudgetController extends ChangeNotifier {
         _recompute();
       });
     });
+    _contributionsSub ??= watchContributions().listen((result) {
+      result.fold((f) => _setError(f.message), (list) {
+        _allContributions = list;
+        _recompute();
+      });
+    });
     _subscribeEntries();
   }
 
@@ -83,6 +106,13 @@ final class BudgetController extends ChangeNotifier {
   void previousMonth() => selectPeriod(_period.previous);
   void nextMonth() => selectPeriod(_period.next);
   void goToCurrentMonth() => selectPeriod(BudgetPeriod.fromDate(_clock()));
+
+  /// Data sugerida para um aporte lançado a partir deste mês: hoje, se o
+  /// mês for o atual; senão, o primeiro dia do período.
+  DateTime suggestedContributionDate() {
+    final now = _clock();
+    return _period.contains(now) ? now : _period.firstDay;
+  }
 
   Future<bool> add({
     required EntryType type,
@@ -135,6 +165,7 @@ final class BudgetController extends ChangeNotifier {
       entries: _entries,
       rule: _rule,
       now: _clock(),
+      linkedInvestments: linkedInvestments,
     ));
     result.fold((f) => _setError(f.message), (s) => _summary = s);
     notifyListeners();
@@ -167,6 +198,7 @@ final class BudgetController extends ChangeNotifier {
   void dispose() {
     _entriesSub?.cancel();
     _ruleSub?.cancel();
+    _contributionsSub?.cancel();
     super.dispose();
   }
 }

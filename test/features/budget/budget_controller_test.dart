@@ -10,6 +10,11 @@ import 'package:i_shall_be_released/features/budget/domain/entities/entry_type.d
 import 'package:i_shall_be_released/features/budget/domain/repositories/budget_repository.dart';
 import 'package:i_shall_be_released/features/budget/domain/usecases/budget_usecases.dart';
 import 'package:i_shall_be_released/features/budget/presentation/controllers/budget_controller.dart';
+import 'package:i_shall_be_released/features/portfolio/domain/entities/asset.dart';
+import 'package:i_shall_be_released/features/portfolio/domain/entities/asset_transaction.dart';
+import 'package:i_shall_be_released/features/portfolio/domain/usecases/portfolio_usecases.dart';
+
+import '../portfolio/fakes/in_memory_portfolio_repository.dart';
 
 /// Repositório em memória que imita o comportamento reativo do Firestore.
 class InMemoryBudgetRepository implements BudgetRepository {
@@ -84,10 +89,15 @@ class InMemoryBudgetRepository implements BudgetRepository {
   }
 }
 
-BudgetController _controller(BudgetRepository repo, {BudgetPeriod? period}) =>
+BudgetController _controller(
+  BudgetRepository repo,
+  InMemoryPortfolioRepository portfolio, {
+  BudgetPeriod? period,
+}) =>
     BudgetController(
       watchEntries: WatchEntries(repo),
       watchAllocationRule: WatchAllocationRule(repo),
+      watchContributions: WatchContributions(portfolio),
       addEntry: AddEntry(repo),
       updateEntry: UpdateEntry(repo),
       deleteEntry: DeleteEntry(repo),
@@ -102,11 +112,13 @@ Future<void> _flush() => Future<void>.delayed(Duration.zero);
 
 void main() {
   late InMemoryBudgetRepository repo;
+  late InMemoryPortfolioRepository portfolio;
   late BudgetController c;
 
   setUp(() {
     repo = InMemoryBudgetRepository();
-    c = _controller(repo);
+    portfolio = InMemoryPortfolioRepository();
+    c = _controller(repo, portfolio);
     c.start();
   });
 
@@ -198,5 +210,62 @@ void main() {
     );
     expect(ok, isFalse);
     expect(c.error, contains('100%'));
+  });
+
+  test('aportes da carteira no mês entram no envelope de investimentos', () async {
+    await _flush();
+    await c.add(type: EntryType.income, description: 'Salário', amount: 10000);
+    await c.add(type: EntryType.investment, description: 'Poupança', amount: 200);
+    final asset = (await portfolio.addAsset(const Asset(
+      id: '',
+      ticker: 'PETR4',
+      name: 'Petrobras',
+      assetClass: AssetClass.stock,
+    )))
+        .valueOrNull!;
+    // Dentro do período (dez/2025): custo 10 × 30 + 5 = 305.
+    await portfolio.addTransaction(AssetTransaction(
+      id: '',
+      assetId: asset.id,
+      type: TransactionType.buy,
+      quantity: 10,
+      unitPrice: 30,
+      fees: 5,
+      date: DateTime(2025, 12, 3),
+    ));
+    // Fora do período e venda: ignorados.
+    await portfolio.addTransaction(AssetTransaction(
+      id: '',
+      assetId: asset.id,
+      type: TransactionType.buy,
+      quantity: 1,
+      unitPrice: 999,
+      date: DateTime(2025, 11, 30),
+    ));
+    await portfolio.addTransaction(AssetTransaction(
+      id: '',
+      assetId: asset.id,
+      type: TransactionType.sell,
+      quantity: 1,
+      unitPrice: 50,
+      date: DateTime(2025, 12, 10),
+    ));
+    await _flush();
+
+    expect(c.contributions.map((x) => x.amount), [305]);
+    expect(c.linkedInvestments, 305);
+    expect(c.summary?.investments.spent, closeTo(505, 1e-9));
+    // recorrentes = 10000 − 0 fixas − 505 investidos
+    expect(c.summary?.recurringExpenses.budget, closeTo(9495, 1e-9));
+    expect(c.summary?.finalBalance, closeTo(9495, 1e-9));
+
+    // Trocar de mês: o aporte de novembro aparece lá.
+    c.previousMonth();
+    await _flush();
+    expect(c.contributions.map((x) => x.amount), [999]);
+    expect(c.suggestedContributionDate(), DateTime(2025, 11, 1));
+    c.nextMonth();
+    await _flush();
+    expect(c.suggestedContributionDate(), DateTime(2025, 12, 12));
   });
 }

@@ -14,12 +14,17 @@ final class ComputeBudgetSummaryParams {
     required this.entries,
     required this.rule,
     required this.now,
+    this.linkedInvestments = 0,
   });
 
   final BudgetPeriod period;
   final List<BudgetEntry> entries;
   final AllocationRule rule;
   final DateTime now;
+
+  /// Soma dos aportes feitos na carteira dentro do período. Entra no
+  /// envelope de investimentos junto com os lançamentos avulsos.
+  final double linkedInvestments;
 }
 
 /// Regra de negócio central do orçamento (cascata dinâmica):
@@ -32,7 +37,8 @@ final class ComputeBudgetSummaryParams {
 /// ```
 ///
 /// O que não for gasto em fixas ou investimentos sobra, automaticamente,
-/// para as despesas recorrentes.
+/// para as despesas recorrentes. "Investimentos feitos" = lançamentos
+/// avulsos do envelope + aportes registrados na carteira no mês.
 final class ComputeBudgetSummary
     implements SyncUseCase<BudgetSummary, ComputeBudgetSummaryParams> {
   const ComputeBudgetSummary();
@@ -49,7 +55,8 @@ final class ComputeBudgetSummary
     final rule = params.rule;
     final income = total(EntryType.income);
     final fixedSpent = total(EntryType.fixedExpense);
-    final investmentSpent = total(EntryType.investment);
+    final investmentSpent =
+        total(EntryType.investment) + math.max(0.0, params.linkedInvestments);
     final recurringSpent = total(EntryType.recurringExpense);
 
     final afterFixed = math.max(0.0, income - fixedSpent);

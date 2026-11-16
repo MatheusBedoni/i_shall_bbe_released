@@ -25,4 +25,17 @@ void main() {
     expect(out, contains('R\$'));
     expect(out, contains('1.234,50'));
   });
+
+  group('Money.compact', () {
+    test('milhares e milhoes abreviados', () {
+      expect(Money.compact(12500), 'R\$ 12,5 mil');
+      expect(Money.compact(1000), 'R\$ 1 mil');
+      expect(Money.compact(1200000), 'R\$ 1,2 mi');
+    });
+
+    test('abaixo de mil usa o formato completo', () {
+      expect(Money.compact(999), contains('999,00'));
+      expect(Money.compact(0), contains('0,00'));
+    });
+  });
 }
