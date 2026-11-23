@@ -33,9 +33,8 @@ class SetupRequiredApp extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Rode na raiz do projeto:\n\n'
-                    'dart pub global activate flutterfire_cli\n'
-                    'flutterfire configure\n\n'
+                    'Copie o arquivo .env.example para .env na raiz do projeto, '
+                    'preencha as variáveis FIREBASE_* (ou rode flutterfire configure) '
                     'e reinicie o app.',
                     textAlign: TextAlign.center,
                   ),

@@ -27,9 +27,24 @@ abstract final class AppConfig {
   }
 
   /// Token da brapi.dev. Vazio quando não configurado.
-  static String get brapiToken {
-    if (_brapiFromDefine.isNotEmpty) return _brapiFromDefine;
-    return (_env('BRAPI_TOKEN') ?? '').trim();
+  static String get brapiToken =>
+      env('BRAPI_TOKEN', fromDefine: _brapiFromDefine);
+
+  /// Retorna o valor de [key] (priorizando [fromDefine], depois `.env`), ou `''`.
+  static String env(String key, {String fromDefine = ''}) {
+    if (fromDefine.isNotEmpty) return fromDefine;
+    return (_env(key) ?? '').trim();
+  }
+
+  /// Retorna o valor obrigatório de [key] ou lança [StateError] caso esteja vazio.
+  static String requireEnv(String key, {String fromDefine = ''}) {
+    final value = env(key, fromDefine: fromDefine);
+    if (value.isEmpty) {
+      throw StateError(
+        'Variável "$key" não definida. Configure-a no arquivo .env (veja .env.example).',
+      );
+    }
+    return value;
   }
 
   static String? _env(String key) {
